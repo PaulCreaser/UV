@@ -1,6 +1,7 @@
 #include <Adafruit_SI1145.h>
-
 #include <BLE_API.h>
+
+//#define DEBUG 1
 
 BLE                                       ble;
 Timeout                                   timeout;
@@ -39,22 +40,28 @@ void m_uv_ticker_handle(void)
 {
   uv_value[0] = uv_dev.readUV();
   float UVindex = (float)uv_value[0];
-  UVindex /= 100.0;  
-  Serial.print(",UV, ");  Serial.println(UVindex);
+  UVindex /= 100.0;
+  #ifdef DEBUG
+  Serial.print("UV:");  Serial.println(UVindex);
+  #endif    
   m_uv_handle();
 }
 
 void m_ir_ticker_handle(void)
 {
   ir_value[0] = uv_dev.readIR();
-  Serial.print(",IR, "); Serial.print(ir_value[0]);
+  #ifdef DEBUG
+  Serial.print("IR:"); Serial.print(ir_value[0]);
+  #endif    
   m_ir_handle();
 }
 
 void m_hi_ticker_handle(void)
 {
   hi_value[0] = uv_dev.readVisible();
+  #ifdef DEBUG
   Serial.print("Vis, "); Serial.print(hi_value[0]);
+  #endif    
   m_hi_handle();
 }
 
@@ -81,7 +88,9 @@ void m_hi_handle()
 void setup() {
 
     // put your setup code here, to run once
+    #ifdef DEBUG
     Serial.begin(9600);
+    #endif
 
     ble.init();
     ble.onDisconnection(disconnectionCallBack);
@@ -109,7 +118,9 @@ void setup() {
     ble.startAdvertising();
     if (! uv_dev.begin())
     {
+      #ifdef DEBUG
       Serial.println("Didn't find Si1145");
+      #endif    
     }
     uv_ticker.attach_us(m_uv_ticker_handle, 1000000);
     hi_ticker.attach_us(m_hi_ticker_handle, 1000000);
