@@ -19,25 +19,26 @@ static const uint8_t service1_hi_uuid[]             = {0x71, 0x3D, 0, 2, 0x50, 0
 
 static const uint8_t uart_base_uuid_rev[]           = {0x1E, 0x94, 0x8D, 0xF1, 0x48, 0x31, 0x94, 0xBA, 0x75, 0x4C, 0x3E, 0x50, 0, 0, 0x3D, 0x71};
 
-uint16_t uv_value[1] = {0};
-uint16_t ir_value[1] = {0};
-uint16_t hi_value[1] = {0};
+static uint16_t uv_value[1] = {0};
+static uint16_t ir_value[1] = {0};
+static uint16_t hi_value[1] = {0};
 
+GattCharacteristic  characteristic1(service1_uv_uuid, (uint8_t*)&uv_value, 1, 2, GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_NOTIFY | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ);
 
-GattCharacteristic  characteristic1(service1_uv_uuid, (uint8_t*)uv_value, 1, 2, GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_NOTIFY | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ);
+GattCharacteristic  characteristic2(service1_ir_uuid, (uint8_t*)&ir_value, 1, 2, GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_NOTIFY | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ);
 
-GattCharacteristic  characteristic2(service1_ir_uuid, (uint8_t*)ir_value, 1, 2, GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_NOTIFY | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ);
-
-GattCharacteristic  characteristic3(service1_hi_uuid, (uint8_t*)hi_value, 1, 2, GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_NOTIFY | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ);
+GattCharacteristic  characteristic3(service1_hi_uuid, (uint8_t*)&hi_value, 1, 2, GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_NOTIFY | GattCharacteristic::BLE_GATT_CHAR_PROPERTIES_READ);
 
 GattCharacteristic *sensorChars[] = {&characteristic1, &characteristic2, &characteristic3};
 
 GattService         uartService(service1_uuid, sensorChars, sizeof(sensorChars) / sizeof(GattCharacteristic *));
 
+bool connected = false;
 
 
 void m_uv_ticker_handle(void)
 {
+  if (!connected) return;
   uv_value[0] = uv_dev.readUV();
   float UVindex = (float)uv_value[0];
   UVindex /= 100.0;
@@ -49,6 +50,7 @@ void m_uv_ticker_handle(void)
 
 void m_ir_ticker_handle(void)
 {
+  if (!connected) return;  
   ir_value[0] = uv_dev.readIR();
   #ifdef DEBUG
   Serial.print("IR:"); Serial.print(ir_value[0]);
@@ -58,6 +60,7 @@ void m_ir_ticker_handle(void)
 
 void m_hi_ticker_handle(void)
 {
+  if (!connected) return;
   hi_value[0] = uv_dev.readVisible();
   #ifdef DEBUG
   Serial.print("Vis, "); Serial.print(hi_value[0]);
@@ -67,22 +70,29 @@ void m_hi_ticker_handle(void)
 
 void disconnectionCallBack(Gap::Handle_t handle, Gap::DisconnectionReason_t reason)
 {
+    connected = false;
     ble.startAdvertising();
+}
+
+void connectionCallBack(const Gap::ConnectionCallbackParams_t *p_conn_param)
+{
+    connected = false;//true;
+    ble.stopAdvertising();
 }
 
 void m_uv_handle()
 {   //update characteristic data
-    ble.updateCharacteristicValue(characteristic1.getValueAttribute().getHandle(), (uint8_t*)uv_value, 2);
+    ble.updateCharacteristicValue(characteristic1.getValueAttribute().getHandle(), (uint8_t*)&uv_value, 2);
 }
 
 void m_ir_handle()
 {   //update characteristic data
-    ble.updateCharacteristicValue(characteristic2.getValueAttribute().getHandle(), (uint8_t*)ir_value, 2);
+    ble.updateCharacteristicValue(characteristic2.getValueAttribute().getHandle(), (uint8_t*)&ir_value, 2);
 }
 
 void m_hi_handle()
 {   //update characteristic data
-    ble.updateCharacteristicValue(characteristic3.getValueAttribute().getHandle(), (uint8_t*)hi_value, 2);
+    ble.updateCharacteristicValue(characteristic3.getValueAttribute().getHandle(), (uint8_t*)&hi_value, 2);
 }
 
 void setup() {
@@ -93,6 +103,7 @@ void setup() {
     #endif
 
     ble.init();
+    ble.onConnection(connectionCallBack);
     ble.onDisconnection(disconnectionCallBack);
 
     // setup adv_data and srp_data
