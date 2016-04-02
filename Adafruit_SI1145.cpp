@@ -116,7 +116,11 @@ uint16_t Adafruit_SI1145::readUV(void) {
 
 // returns visible+IR light levels
 uint16_t Adafruit_SI1145::readVisible(void) {
- return read16(0x22); 
+ uint16_t reading = read16(0x22);
+ float reading_f = (float)reading;
+ reading_f = (reading_f/128.0)/0.282; // SI1145_PARAM_ADCGAIN_128 
+ reading = (uint16_t)reading_f;
+ return reading; 
 }
 
 // returns IR light levels
