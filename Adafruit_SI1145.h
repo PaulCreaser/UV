@@ -170,7 +170,7 @@ class Adafruit_SI1145  {
 
   uint16_t readUV();
   uint16_t readIR();
-  uint16_t readVisible();
+  float readVisible();
   uint16_t readProx();
   uint8_t  readResp();
 
